@@ -37,4 +37,8 @@ jobs:
             Write-Host "FAIL - the linter no longer detects the known-bad line."
             exit 1
           }
+          # The linter is SUPPOSED to exit non-zero here. Reset it explicitly:
+          # the Actions PowerShell wrapper fails the step on a leftover
+          # $LASTEXITCODE, which would turn a passing self-test into a red X.
           Write-Host "PASS - the linter still catches it."
+          exit 0
