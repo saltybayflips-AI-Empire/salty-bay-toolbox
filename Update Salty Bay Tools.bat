@@ -68,6 +68,10 @@ echo  ------------------------------------------------------------
 echo   !TOOL_NAME!
 echo  ------------------------------------------------------------
 
+REM  Scan roots include "%USERPROFILE%\Salty Bay Tools" — the folder the Comp
+REM  Tool README suggests — which the first version of this updater MISSED.
+REM  A copy there was never found -> never git-linked -> silently frozen on an
+REM  old version until it broke (Red, 7/23/26).
 for %%R in (
     "%USERPROFILE%\Desktop"
     "%USERPROFILE%\OneDrive\Desktop"
@@ -75,6 +79,9 @@ for %%R in (
     "%USERPROFILE%\OneDrive\Downloads"
     "%USERPROFILE%\Documents"
     "%USERPROFILE%\OneDrive\Documents"
+    "%USERPROFILE%\Salty Bay Tools"
+    "%USERPROFILE%\OneDrive\Salty Bay Tools"
+    "C:\Salty Bay Tools"
 ) do (
     if exist "%%~R" (
         for /f "delims=" %%F in ('dir /b /s /a-d "%%~R\%SIG%" 2^>nul') do (
