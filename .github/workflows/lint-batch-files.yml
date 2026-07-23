@@ -1,0 +1,40 @@
+# The updater is the one file every teammate runs when something is already
+# broken, so it is the last thing that can afford to break itself. It cannot be
+# smoke-tested the way a launcher can - it scans real folders and reaches out
+# to GitHub - so at minimum it gets linted, and the linter it is checked
+# against lives right here, which makes this repo the canonical rules.
+name: Lint batch files
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: No stray parens, no non-ASCII
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint every .bat in this repo
+        run: python lint_batch_files.py .
+
+      - name: Self-test - the linter must still catch the 7/23 line
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force canary | Out-Null
+          Set-Content canary\bad.bat -Encoding ascii -Value @(
+            '@echo off',
+            'if 1==1 (',
+            '    echo FAILED (git pull did not apply) on %DATE% %TIME%> "x.txt"',
+            ')'
+          )
+          python lint_batch_files.py canary
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "FAIL - the linter no longer detects the known-bad line."
+            exit 1
+          }
+          Write-Host "PASS - the linter still catches it."
