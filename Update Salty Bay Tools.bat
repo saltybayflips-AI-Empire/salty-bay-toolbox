@@ -17,7 +17,7 @@ echo   Deals folder, the court login, downloaded county data, etc).
 echo  ============================================================
 echo.
 
-REM ── Make sure Git is available (the updater needs it) ──
+REM -- Make sure Git is available (the updater needs it) --
 where git >nul 2>&1
 if errorlevel 1 (
     echo  [..] Git isn't installed yet - installing it one time, please wait...
@@ -33,6 +33,13 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM A per-tool failure is recorded to this file rather than a variable, because
+REM :process_tool runs inside setlocal and anything set in there is discarded.
+REM Without it the final banner said "Everything is up to date" even when a
+REM download had failed - the kind of quiet lie that cost us 7/23.
+set "FAILFLAG=%TEMP%\_salty_bay_update_failures.txt"
+if exist "%FAILFLAG%" del "%FAILFLAG%" >nul 2>&1
+
 echo  Scanning your Desktop, Downloads and Documents ^(this can take a minute^)...
 
 REM ================= THE TOOL LIST =================
@@ -43,6 +50,7 @@ call :process_tool "E&F Lead Pull" "Salty Bay E&F Pull.bat"   "https://github.co
 REM ================================================
 
 echo.
+if exist "%FAILFLAG%" goto :some_failed
 echo  ============================================================
 echo   [DONE] Everything is up to date. You can close this window
 echo   and open your tools the normal way.
@@ -50,6 +58,23 @@ echo  ============================================================
 echo.
 pause
 exit /b 0
+
+:some_failed
+echo  ============================================================
+echo   [PARTLY DONE] These did NOT get the update:
+echo.
+type "%FAILFLAG%"
+echo.
+echo   Everything else is current, and the tools still open on the
+echo   copy already on this computer.
+echo.
+echo   Send this to KG: open the tool's folder and double-click
+echo   "Send Logs to KG.bat", then paste the result into Slack.
+echo  ============================================================
+echo.
+del "%FAILFLAG%" >nul 2>&1
+pause
+exit /b 1
 
 
 REM =====================================================================
@@ -68,8 +93,8 @@ echo  ------------------------------------------------------------
 echo   !TOOL_NAME!
 echo  ------------------------------------------------------------
 
-REM  Scan roots include "%USERPROFILE%\Salty Bay Tools" — the folder the Comp
-REM  Tool README suggests — which the first version of this updater MISSED.
+REM  Scan roots include "%USERPROFILE%\Salty Bay Tools" - the folder the Comp
+REM  Tool README suggests - which the first version of this updater MISSED.
 REM  A copy there was never found -> never git-linked -> silently frozen on an
 REM  old version until it broke (Red, 7/23/26).
 for %%R in (
@@ -99,7 +124,7 @@ if "!FOUND!"=="0" (
         echo   Downloading !TOOL_NAME! to your Desktop...
         git clone "%REPO%" "%USERPROFILE%\Desktop\%FOLDER%"
         if errorlevel 1 (
-            echo   [!] Couldn't download !TOOL_NAME!. You may not have GitHub access
+            echo   [X] Couldn't download !TOOL_NAME!. You may not have GitHub access
             echo       to it yet - tell KG and he'll grant you access, then re-run this.
         ) else (
             if exist "%USERPROFILE%\Desktop\%FOLDER%\install.bat" (
@@ -132,8 +157,9 @@ git remote remove origin >nul 2>nul
 git remote add origin "%REPO%" >nul 2>nul
 git fetch origin main
 if errorlevel 1 (
-    echo   [!] Could not download the update - a GitHub sign-in may be needed.
-    echo       Left this copy as-is. Screenshot this and send it to KG if it repeats.
+    echo   [X] Could not download the update - a GitHub sign-in may be needed.
+    echo       Left this copy as-is.
+    echo   !TOOL_NAME! at !D!>> "%FAILFLAG%"
 ) else (
     git reset --hard origin/main
     git branch --set-upstream-to=origin/main main >nul 2>nul
